@@ -19,42 +19,44 @@ JournalRow = namedtuple(
         'ordinal date description account other_account amount'
 )
 
-def journal_row(raw_journal_row):
-    ordinal = int(raw_journal_row)
-    date = date_from(raw_journal_row.date)
-    desc = raw_journal_row.description
-    account = account_from(raw_journal_row.account)
-    other_account = account_from(raw_journal_row.other_account)
-    amount = amount_from(raw_journal_row.amount)
+def journal_row(row_dict):
+    ordinal = int(row_dict['ordinal'])
+    date = date_in_ledger_fmt(row_dict['date'])
+    desc = row_dict['description']
+    account = account_in_ledger_fmt(row_dict['account'])
+    other_account = account_in_ledger_fmt(row_dict['other_account'])
+    amount = amount_in_ledger_fmt(row_dict['amount'])
     return JournalRow(ordinal, date, desc, account, other_account, amount)
 
-def amount_from(formatted_money_amount):
-    '''>>> amount_from('-2 099,49 zł')
-    Decimal('-2099.49')
+def amount_in_ledger_fmt(amount_in_source_fmt):
+    '''>>> amount_in_ledger_fmt('(2 099,49) zł')
+    '-2099.49 PLN'
     '''
-    comma_separated_amount = re.sub('[^0-9,-]', '', formatted_money_amount)
+    comma_separated_amount = re.sub('[^0-9,()]', '', amount_in_source_fmt)
+    if comma_separated_amount.startswith('('):
+        comma_separated_amount = '-' + comma_separated_amount[1:-1]
     dot_separated_amount = comma_separated_amount.replace(',', '.')
-    return Decimal(dot_separated_amount)
+    return f'{dot_separated_amount} CURRENCY'
 
-def date_from(formatted_date):
-    '''>>> date_from('28 wrz 2022 (śr.)')
-    datetime.date(2022, 9, 28)
+def date_in_ledger_fmt(date_in_source_fmt):
+    '''>>> date_in_ledger_fmt('1 wrz 2022 (cz.)')
+    '2022/09/01'
     '''
     months = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze',
               'lip', 'sie', 'wrz', 'paź', 'lis', 'gru']
-    day, month_name, year, *rest = formatted_date.split()
+    day, month_name, year, *rest = date_in_source_fmt.split()
     day = int(day)
     month = months.index(month_name) + 1
     year = int(year)
-    return date(year, month, day)
+    return f'{year}/{month:02}/{day:02}'
 
-def account_from(formatted_account):
-    '''>>> account_from(r'Cache\Current Assets\Assets')
+def account_in_ledger_fmt(account_in_source_fmt):
+    '''>>> account_in_ledger_fmt(r'Cache\Current Assets\Assets')
     'Assets:Current Assets:Cache'
     '''
-    sub_accounts = formatted_account.split('\\')
-    sub_accounts.reverse()
-    return ':'.join(sub_accounts)
+    account_names = account_in_source_fmt.split('\\')
+    account_names.reverse()
+    return ':'.join(account_names)
 
 def print_usage():
     exec_name = sys.argv[0]
@@ -63,11 +65,16 @@ def print_usage():
     print('a format used by "ledger" program.')
 
 def transactions_dict(tsv_file):
-    header_row = next(file)
+    rows = csv.DictReader(
+        tsv_file,
+        delimiter='\t',
+        fieldnames= ['ordinal', 'date', 'description', 'account', 'other_account', 'amount', 'is_posted']
+    )
+    header_row = next(rows)
     transactions = defaultdict(list)
-    for fields in csv.reader(tsv_file, delimiter='\t'):
-        journal_row = RawJournalRow(*fields)
-        transactions[journal_row.ordinal].append(journal_row)
+    for row_dict in rows:
+        row_tuple = journal_row(row_dict)
+        transactions[row_tuple.ordinal].append(row_tuple)
     return transactions
 
 if __name__ == '__main__':
