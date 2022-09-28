@@ -99,6 +99,51 @@ def indented(text, width=4):
     indented_text = indent + text.replace('\n', '\n' + indent)
     return indented_text
 
+def table(rows, justify):
+    """Returns a string containg a rendering of "rows" as a table with columns
+    justified according to justification scheme/spec in "justify" argument.
+
+    >>> data = [
+    ...    ('NAME', 'LEVEL'),
+    ...    ('John Doe', '7'),
+    ...    ('Geralt of Rivia', '35'),
+    ...    ('Guido van Possum', '9,000')
+    ... ]
+    >>> print(table(data, 'l r'))
+    NAME             LEVEL
+    John Doe             7
+    Geralt of Rivia     35
+    Guido van Possum 9,000
+    """
+    columns = transposed(rows)
+    transposed_result = []
+    for col, justification in zip(columns, justify.split()):
+        width = max(len(cell) for cell in col)
+        transposed_column = []
+        for cell in col:
+            if justification == 'l':
+                transposed_column.append(cell.ljust(width))
+            elif justification == 'r':
+                transposed_column.append(cell.rjust(width))
+            else:
+                raise ValueError('Text justification specifier not supported:'
+                        f"'{justification}'")
+        transposed_result.append(transposed_column)
+    rows_with_justified_columns = transposed(transposed_result)
+    result_lines = [' '.join(field) for field in rows_with_justified_columns]
+    return '\n'.join(result_lines)
+
+
+def transposed(matrix):
+    """Returns transposed 2-dimensional matrix (list of flat lists).
+
+    >>> transposed([['a', 1, 'one'], ['b', 2, 'two'], ['c', 3, 'three']])
+    [['a', 'b', 'c'], [1, 2, 3], ['one', 'two', 'three']]
+    """
+    transposed = []
+    for column in zip(*matrix):
+        transposed.append(list(column))
+    return transposed
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
@@ -114,8 +159,8 @@ if __name__ == '__main__':
             rows = transactions[ordinal]
             date = rows[0].date
             description = rows[0].description
-            transfers = [f'{row.account} {row.amount}' for row in rows]
+            transfers = [(row.account, row.amount) for row in rows]
             writeln = functools.partial(print, file=out_file)
             writeln(f'{date} {description}')
-            writeln(indented('\n'.join(transfers)))
+            writeln(indented(table(transfers, justify='l r')))
             writeln(file=out_file)
