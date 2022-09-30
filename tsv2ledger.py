@@ -88,7 +88,7 @@ def transactions_dict(tsv_file):
     return transactions
 
 def indented(text, width=4):
-    r"""Return "text" with "with" number of spaces prepended to each line.
+    r"""Return "text" with "width" number of spaces prepended to each line.
     
     >>> print(indented('1\n2\n3'))
         1
@@ -99,21 +99,22 @@ def indented(text, width=4):
     indented_text = indent + text.replace('\n', '\n' + indent)
     return indented_text
 
-def table(rows, justify):
+def table(rows, justify, col_gap=' '):
     """Returns a string containg a rendering of "rows" as a table with columns
     justified according to justification scheme/spec in "justify" argument.
+    Columns will be separated by "col_gap".
 
     >>> data = [
-    ...    ('NAME', 'LEVEL'),
-    ...    ('John Doe', '7'),
-    ...    ('Geralt of Rivia', '35'),
-    ...    ('Guido van Possum', '9,000')
+    ...    ('NAME', 'COUNTRY', 'LEVEL'),
+    ...    ('John Doe', 'USA', '7'),
+    ...    ('Geralt of Rivia', 'Temeria', '35'),
+    ...    ('Guido van Rossum', 'Netherlands', '9,000')
     ... ]
-    >>> print(table(data, 'l r'))
-    NAME             LEVEL
-    John Doe             7
-    Geralt of Rivia     35
-    Guido van Possum 9,000
+    >>> print(table(data, 'l l r', col_gap='  '))
+    NAME              COUNTRY      LEVEL
+    John Doe          USA              7
+    Geralt of Rivia   Temeria         35
+    Guido van Rossum  Netherlands  9,000
     """
     columns = transposed(rows)
     transposed_result = []
@@ -130,7 +131,9 @@ def table(rows, justify):
                         f"'{justification}'")
         transposed_result.append(transposed_column)
     rows_with_justified_columns = transposed(transposed_result)
-    result_lines = [' '.join(field) for field in rows_with_justified_columns]
+    result_lines = [
+        col_gap.join(field) for field in rows_with_justified_columns
+    ]
     return '\n'.join(result_lines)
 
 
@@ -162,5 +165,5 @@ if __name__ == '__main__':
             transfers = [(row.account, row.amount) for row in rows]
             writeln = functools.partial(print, file=out_file)
             writeln(f'{date} {description}')
-            writeln(indented(table(transfers, justify='l r')))
-            writeln(file=out_file)
+            writeln(indented(table(transfers, justify='l r', col_gap='  ')))
+            writeln()
