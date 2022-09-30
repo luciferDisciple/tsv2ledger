@@ -10,11 +10,6 @@ from decimal import Decimal
 
 CURRENCY = 'PLN'
 
-RawJournalRow = namedtuple(
-        'RawJournalRow',
-        'ordinal date description account other_account amount is_posted'
-)
-
 JournalRow = namedtuple(
         'JournalRow',
         'ordinal date description account  amount'
