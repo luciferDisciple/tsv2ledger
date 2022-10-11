@@ -23,13 +23,19 @@ def journal_row(row_dict):
     amount = amount_in_ledger_fmt(row_dict['amount'])
     return JournalRow(ordinal, date, desc, account, amount)
 
+ZERO_AMOUNT_PATTERN = re.compile('- +zł')
+
 def amount_in_ledger_fmt(amount_in_source_fmt):
     """Convert a string representing amount field to a format used by "ledger"
     program.
 
     >>> amount_in_ledger_fmt('(2 099,49) zł')
     '-2099.49 PLN'
+    >>> amount_in_ledger_fmt('  -  zł ')
+    '0.00 PLN'
     """
+    if ZERO_AMOUNT_PATTERN.search(amount_in_source_fmt):
+        return '0.00 PLN'
     comma_separated_amount = re.sub('[^0-9,()]', '', amount_in_source_fmt)
     if comma_separated_amount.startswith('('):
         comma_separated_amount = '-' + comma_separated_amount[1:-1]
