@@ -23,18 +23,36 @@ def journal_row(row_dict):
     amount = amount_in_ledger_fmt(row_dict['amount'])
     return JournalRow(ordinal, date, desc, account, amount)
 
+POSITIVE_AMOUNT_PATTERN = re.compile(r'([0-9 ]+),(\d\d) (EUR|PLN|zł)')
+NEGATIVE_AMOUNT_PATTERN = re.compile(r'\(([0-9 ]+),(\d\d)\) (EUR|PLN|zł)')
+ZERO_AMOUNT_PATTERN = re.compile(r'- +(EUR|PLN|zł)')
+
 def amount_in_ledger_fmt(amount_in_source_fmt):
     """Convert a string representing amount field to a format used by "ledger"
     program.
 
     >>> amount_in_ledger_fmt('(2 099,49) zł')
-    '-2099.49 PLN'
+    '-2,099.49 PLN'
+    >>> amount_in_ledger_fmt('   -   zł')
+    '0.00 PLN'
+    >>> amount_in_ledger_fmt('3 999,99 EUR')
+    '3,999.99 EUR'
     """
-    comma_separated_amount = re.sub('[^0-9,()]', '', amount_in_source_fmt)
-    if comma_separated_amount.startswith('('):
-        comma_separated_amount = '-' + comma_separated_amount[1:-1]
-    dot_separated_amount = comma_separated_amount.replace(',', '.')
-    return f'{dot_separated_amount} PLN'
+    currency_symbols = {'EUR': 'EUR', 'PLN': 'PLN', 'zł': 'PLN'}
+    if match := POSITIVE_AMOUNT_PATTERN.search(amount_in_source_fmt):
+        int_part, frac_part, currency = match.groups()
+        int_part = int(int_part.replace(' ', ''))
+        symbol = currency_symbols[currency]
+        return f'{int_part:,d}.{frac_part} {symbol}'
+    if match := NEGATIVE_AMOUNT_PATTERN.search(amount_in_source_fmt):
+        int_part, frac_part, currency = match.groups()
+        int_part = int(int_part.replace(' ', ''))
+        symbol = currency_symbols[currency]
+        return f'-{int_part:,d}.{frac_part} {symbol}'
+    if match := ZERO_AMOUNT_PATTERN.search(amount_in_source_fmt):
+        currency = match.group(1)
+        symbol = currency_symbols[currency]
+        return f'0.00 {symbol}'
 
 def date_in_ledger_fmt(date_in_source_fmt):
     """Convert a string representing date to a format used by "ledger"
