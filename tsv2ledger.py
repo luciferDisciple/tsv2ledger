@@ -23,9 +23,9 @@ def journal_row(row_dict):
     amount = amount_in_ledger_fmt(row_dict['amount'])
     return JournalRow(ordinal, date, desc, account, amount)
 
-POSITIVE_AMOUNT_PATTERN = re.compile(r'([0-9 ]+),(\d\d) (EUR|PLN|zł)')
-NEGATIVE_AMOUNT_PATTERN = re.compile(r'\(([0-9 ]+),(\d\d)\) (EUR|PLN|zł)')
-ZERO_AMOUNT_PATTERN = re.compile(r'- +(EUR|PLN|zł)')
+POSITIVE_AMOUNT_PATTERN = re.compile(r'([0-9\s]+),(\d\d)\s+(EUR|PLN|zł)')
+NEGATIVE_AMOUNT_PATTERN = re.compile(r'\(([0-9\s]+),(\d\d)\)\s+(EUR|PLN|zł)')
+ZERO_AMOUNT_PATTERN = re.compile(r'-\s+(EUR|PLN|zł)')
 
 def amount_in_ledger_fmt(amount_in_source_fmt):
     """Convert a string representing amount field to a format used by "ledger"
@@ -41,18 +41,26 @@ def amount_in_ledger_fmt(amount_in_source_fmt):
     currency_symbols = {'EUR': 'EUR', 'PLN': 'PLN', 'zł': 'PLN'}
     if match := POSITIVE_AMOUNT_PATTERN.search(amount_in_source_fmt):
         int_part, frac_part, currency = match.groups()
-        int_part = int(int_part.replace(' ', ''))
+        int_part = int(remove_whitespace(int_part))
         symbol = currency_symbols[currency]
         return f'{int_part:,d}.{frac_part} {symbol}'
     if match := NEGATIVE_AMOUNT_PATTERN.search(amount_in_source_fmt):
         int_part, frac_part, currency = match.groups()
-        int_part = int(int_part.replace(' ', ''))
+        int_part = int(remove_whitespace(int_part))
         symbol = currency_symbols[currency]
         return f'-{int_part:,d}.{frac_part} {symbol}'
     if match := ZERO_AMOUNT_PATTERN.search(amount_in_source_fmt):
         currency = match.group(1)
         symbol = currency_symbols[currency]
         return f'0.00 {symbol}'
+
+def remove_whitespace(string):
+    """Returns a string with all whitespace characters removed.
+
+    >>> remove_whitespace('1 000\xa0\xa0777')
+    '1000777'
+    """
+    return re.sub(r'\s', '', string)
 
 def date_in_ledger_fmt(date_in_source_fmt):
     """Convert a string representing date to a format used by "ledger"
