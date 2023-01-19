@@ -5,8 +5,6 @@ import re
 import sys
 from collections import defaultdict
 from collections import namedtuple
-from datetime import date
-from decimal import Decimal
 
 CURRENCY = 'PLN'
 
@@ -14,6 +12,7 @@ JournalRow = namedtuple(
         'JournalRow',
         'ordinal date description account  amount'
 )
+
 
 def journal_row(row_dict):
     ordinal = int(row_dict['ordinal'])
@@ -23,9 +22,11 @@ def journal_row(row_dict):
     amount = amount_in_ledger_fmt(row_dict['amount'])
     return JournalRow(ordinal, date, desc, account, amount)
 
+
 POSITIVE_AMOUNT_PATTERN = re.compile(r'([0-9\s]+),(\d\d)\s+(EUR|PLN|zł)')
 NEGATIVE_AMOUNT_PATTERN = re.compile(r'\(([0-9\s]+),(\d\d)\)\s+(EUR|PLN|zł)')
 ZERO_AMOUNT_PATTERN = re.compile(r'-\s+(EUR|PLN|zł)')
+
 
 def amount_in_ledger_fmt(amount_in_source_fmt):
     """Convert a string representing amount field to a format used by "ledger"
@@ -54,6 +55,7 @@ def amount_in_ledger_fmt(amount_in_source_fmt):
         symbol = currency_symbols[currency]
         return f'0.00 {symbol}'
 
+
 def remove_whitespace(string):
     """Returns a string with all whitespace characters removed.
 
@@ -61,6 +63,7 @@ def remove_whitespace(string):
     '1000777'
     """
     return re.sub(r'\s', '', string)
+
 
 def date_in_ledger_fmt(date_in_source_fmt):
     """Convert a string representing date to a format used by "ledger"
@@ -77,8 +80,9 @@ def date_in_ledger_fmt(date_in_source_fmt):
     year = int(year)
     return f'{year}/{month:02}/{day:02}'
 
+
 def account_in_ledger_fmt(account_in_source_fmt):
-    """Convert a string representing account specifier/fully qualified path
+    r"""Convert a string representing account specifier/fully qualified path
     to a format used by "ledger" program.
 
     >>> account_in_ledger_fmt(r'Cache\Current Assets\Assets')
@@ -88,29 +92,32 @@ def account_in_ledger_fmt(account_in_source_fmt):
     account_names.reverse()
     return ':'.join(account_names)
 
+
 def print_usage():
     exec_name = sys.argv[0]
     print(f'usage: {exec_name} TSV_FILE DEST_FILE')
     print('Convert accounting journal from "tab separated values" format to')
     print('a format used by "ledger" program.')
 
+
 def transactions_dict(tsv_file):
     rows = csv.DictReader(
         tsv_file,
         delimiter='\t',
-        fieldnames= ['ordinal', 'date', 'description', 'account',
-                     'other_account', 'amount', 'is_posted']
+        fieldnames=['ordinal', 'date', 'description', 'account',
+                    'other_account', 'amount', 'is_posted']
     )
-    header_row = next(rows)
+    next(rows)  # skip header
     transactions = defaultdict(list)
     for row_dict in rows:
         row_tuple = journal_row(row_dict)
         transactions[row_tuple.ordinal].append(row_tuple)
     return transactions
 
+
 def indented(text, width=4):
     r"""Return "text" with "width" number of spaces prepended to each line.
-    
+
     >>> print(indented('1\n2\n3'))
         1
         2
@@ -119,6 +126,7 @@ def indented(text, width=4):
     indent = ' ' * width
     indented_text = indent + text.replace('\n', '\n' + indent)
     return indented_text
+
 
 def table(rows, justify, col_gap=' '):
     """Returns a string containg a rendering of "rows" as a table with columns
@@ -149,7 +157,7 @@ def table(rows, justify, col_gap=' '):
                 transposed_column.append(cell.rjust(width))
             else:
                 raise ValueError('Text justification specifier not supported:'
-                        f"'{justification}'")
+                                 f"'{justification}'")
         transposed_result.append(transposed_column)
     rows_with_justified_columns = transposed(transposed_result)
     result_lines = [
@@ -168,6 +176,7 @@ def transposed(matrix):
     for column in zip(*matrix):
         transposed.append(list(column))
     return transposed
+
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
