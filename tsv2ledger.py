@@ -1,8 +1,8 @@
 #!/bin/python3
+import argparse
 import csv
 import functools
 import re
-import sys
 from collections import defaultdict
 from collections import namedtuple
 
@@ -93,13 +93,6 @@ def account_in_ledger_fmt(account_in_source_fmt):
     return ':'.join(account_names)
 
 
-def print_usage():
-    exec_name = sys.argv[0]
-    print(f'usage: {exec_name} TSV_FILE DEST_FILE')
-    print('Convert accounting journal from "tab separated values" format to')
-    print('a format used by "ledger" program.')
-
-
 def transactions_dict(tsv_file):
     rows = csv.DictReader(
         tsv_file,
@@ -179,15 +172,23 @@ def transposed(matrix):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print('Wrong number of arguments.')
-        print_usage()
-        exit(1)
-    in_filename = sys.argv[1]
-    out_filename = sys.argv[2]
-    with open(in_filename) as in_file:
+    parser = argparse.ArgumentParser(
+            prog='tsv2ledger',
+            description='Convert accounting journal from "tab separated '
+                        'values" format to a format used by "ledger" program.'
+                        )
+    parser.add_argument(
+            'tsv_file',
+            help='A file with an accounting journal in tsv format. A row has '
+                 'fields: ordinal number, date, description, account, other '
+                 'account, amount. First row is a header row.')
+    parser.add_argument(
+            'dest_file',
+            help='Name of the output file.')
+    args = parser.parse_args()
+    with open(args.tsv_file) as in_file:
         transactions = transactions_dict(in_file)
-    with open(out_filename, 'wt') as out_file:
+    with open(args.dest_file, 'wt') as out_file:
         for ordinal in sorted(transactions.keys()):
             rows = transactions[ordinal]
             date = rows[0].date
